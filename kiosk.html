@@ -29,6 +29,8 @@
   var offlineEl = document.getElementById('offline');
   var countdownTimer = null;
   var retryTimer = null;
+  var swapTimer = null;
+  var pending = null;   // 次の時間帯のQR（サーバーから先にもらっておく）
 
   // ---- 全画面表示（アドレスバー・タブを隠す。対応端末のみ） ----
   // ブラウザの仕様上、タップなどの操作がないと全画面化できないため、
@@ -68,6 +70,7 @@
     if (document.visibilityState === 'visible') requestWakeLock();
   });
   requestWakeLock();
+
   // 更新間隔が長い（例：5分）ときに「287秒後」のような読みにくい表示にならないよう、
   // 1分以上は「○分○秒」の形にする。
   function formatRemain(seconds) {
@@ -77,20 +80,56 @@
     return s === 0 ? (m + '分後に更新') : (m + '分' + s + '秒後に更新');
   }
 
-  function startCountdown(seconds) {
+  // カウントダウンは「残り秒数を1ずつ減らす」のではなく、
+  // 切り替わる時刻（endAt）を決めておき、現在時刻との差を毎回計算して表示する。
+  // 1秒ごとに引き算する方式だと、通信や画面の描画で処理が遅れたぶんだけ
+  // 表示が実際の時刻からずれていくため。
+  //
+  // 残り0秒になった瞬間は、サーバーに問い合わせず、先にもらってある
+  // 次のQR（pending）へその場で差し替える。これで表示が固まらない。
+  function startCountdown(seconds, windowSeconds) {
     clearInterval(countdownTimer);
-    var remain = Math.max(1, seconds);
-    countdownEl.textContent = formatRemain(remain);
-    countdownTimer = setInterval(function () {
-      remain -= 1;
+    var endAt = Date.now() + Math.max(1, seconds) * 1000;
+    var span = windowSeconds || seconds || 300;
+
+    function tick() {
+      var remain = Math.ceil((endAt - Date.now()) / 1000);
       if (remain <= 0) {
-        clearInterval(countdownTimer);
-        fetchToken();
-        return;
+        if (pending) {
+          renderQr(pending);          // 通信を待たずに即切り替え
+          pending = null;
+          endAt = Date.now() + span * 1000;
+          remain = span;
+          fetchToken();               // 裏で次のQRを取りに行く（表示には影響しない）
+        } else {
+          remain = 0;                 // 予備のQRが無いときは応答を待つ
+          fetchToken();
+        }
       }
       countdownEl.textContent = formatRemain(remain);
-    }, 1000);
+    }
+
+    tick();
+    countdownTimer = setInterval(tick, 200);
   }
+
+  // 通信に失敗したときの共通処理。画面に理由を出しつつ、5秒後に自動で再試行する。
+  // 一度つながれば offlineEl は消えるので、スタッフが操作しなくても自然に復帰する。
+  function showTrouble(message) {
+    offlineEl.style.display = 'block';
+    offlineEl.textContent = message;
+    clearTimeout(retryTimer);
+    retryTimer = setTimeout(fetchToken, 5000);
+  }
+
+  // 達成人数の表示を書き換える。QRの更新（5分ごと）とは別に動かすため関数に切り出す。
+  function renderCount(n) {
+    var el = document.getElementById('todayCount');
+    if (typeof n !== 'number') return;        // 取得できなかったときは前の数字を残す
+    el.textContent = '本日のウォーキング達成：' + n + '人';
+    el.style.display = 'block';
+  }
+
   function renderQr(token) {
     var base = window.WB_CONFIG.SITE_BASE_URL;
     var url = base + 'start.html?t=' + encodeURIComponent(token);
@@ -101,8 +140,19 @@
   async function fetchToken() {
     try {
       var base = window.WB_CONFIG.APPS_SCRIPT_URL;
-      var res = await fetch(base + '?action=kioskToken&key=' + encodeURIComponent(adminKey));
-      var json = await res.json();
+      var res = await fetch(base + '?action=kioskToken&key=' + encodeURIComponent(adminKey), { cache: 'no-store' });
+      // Apps Scriptのデプロイを消してしまった場合などは、JSONではなくエラーのHTMLが
+      // 返ってくる。そのままJSONとして読もうとすると通信エラーと区別がつかなくなるため、
+      // いったん文字列で受け取ってから中身を確かめる。
+      var text = await res.text();
+      var json;
+      try {
+        json = JSON.parse(text);
+      } catch (parseError) {
+        showTrouble('接続先の応答が正しくありません（HTTP ' + res.status + '）。' +
+          'Apps Scriptのデプロイ設定を確認してください。');
+        return;
+      }
 
       if (!json.ok) {
         offlineEl.style.display = 'block';
@@ -112,6 +162,8 @@
       offlineEl.style.display = 'none';
 
       if (json.operationEnabled === false) {
+        pending = null;
+        clearInterval(countdownTimer);
         qrEl.innerHTML = '';
         countdownEl.textContent = '';
         offlineEl.style.display = 'block';
@@ -122,20 +174,13 @@
       }
 
       renderQr(json.token);
-      startCountdown(json.remainSeconds || json.windowSeconds || 30);
+      pending = json.nextToken || null;
+      startCountdown(json.remainSeconds || json.windowSeconds || 300,
+                     json.windowSeconds || 300);
 
-      var countEl = document.getElementById('todayCount');
-      if (typeof json.todayCompletions === 'number') {
-        countEl.textContent = '本日のウォーキング達成：' + json.todayCompletions + '人';
-        countEl.style.display = 'block';
-      } else {
-        countEl.style.display = 'none';
-      }
+      renderCount(json.todayCompletions);
     } catch (e) {
-      offlineEl.style.display = 'block';
-      offlineEl.textContent = '再接続中…';
-      clearTimeout(retryTimer);
-      retryTimer = setTimeout(fetchToken, 5000);
+      showTrouble('再接続中…（インターネット接続を確認してください）');
     }
   }
 
