@@ -5,7 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>ウイングベイウォーキング受付</title>
 <link rel="stylesheet" href="assets/style.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!-- 外部サイトから読み込むスクリプトは、配布物のハッシュ（integrity）と一致したときだけ実行させる。
+     一致しなければブラウザが読み込みを止めるため、配信元が改ざんされても
+     このページで実行されることはない。値はcdnjsの公表値と実ファイルで一致を確認済み。 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+        integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA=="
+        crossorigin="anonymous"></script>
+
 <script src="assets/config.js"></script>
 </head>
 <body class="kiosk">
