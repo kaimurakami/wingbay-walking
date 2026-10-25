@@ -89,6 +89,53 @@ window.__wbEarly = (function () {
   var params = new URLSearchParams(window.location.search);
   var token = params.get('t') || '';
 
+  /**
+   * 「ポイントを受け取る」ボタンを出す。
+   *
+   * 押された時点でサーバーに申請し、返ってきたURLへ移動する。
+   * サーバーは1日1回しかURLを返さないので、ボタンを何度押しても
+   * ポイントが二重に付くことはない。
+   *
+   * directUrl が渡されたときは、以前の版のサーバー向けの動き（そのままリンク）。
+   */
+  function showPointButton(directUrl, deviceId) {
+    var btn = document.getElementById('pointButton');
+    btn.textContent = t('finish_button');
+    btn.style.display = 'inline-block';
+    if (directUrl) {
+      btn.href = directUrl;
+      return;
+    }
+    btn.href = '#';
+    var tapped = false;
+    btn.addEventListener('click', async function (ev) {
+      ev.preventDefault();
+      if (tapped) return; // 連打しても申請は1回だけ
+      tapped = true;
+      btn.textContent = t('point_taking');
+      try {
+        var res = await callApi('redeem', { deviceId: deviceId });
+        if (res.ok && res.pointUrl) {
+          try {
+            window.top.location.href = res.pointUrl;
+          } catch (e) {
+            window.location.href = res.pointUrl;
+          }
+          return;
+        }
+        btn.style.display = 'none';
+        setMessage(res.reason === 'point_already_taken'
+          ? t('point_already_taken')
+          : t('point_error'), true);
+      } catch (e) {
+        // 通信に失敗した場合は、まだ受け取れていないのでもう一度押せるようにする
+        tapped = false;
+        btn.textContent = t('finish_button');
+        setMessage(t('point_error'), true);
+      }
+    });
+  }
+
   async function run() {
     if (!token) {
       lastJson = { ok: false, reason: 'token_expired' };
@@ -102,11 +149,11 @@ window.__wbEarly = (function () {
         : await callApi('start', { deviceId: deviceId, token: token });
       lastJson = json;
       setMessage(renderStartMessage(json), !json.ok);
-      if (json.ok && json.phase === 'finish' && json.pointUrl) {
-        var btn = document.getElementById('pointButton');
-        btn.href = json.pointUrl;
-        btn.textContent = t('finish_button');
-        btn.style.display = 'inline-block';
+      // 新しいサーバーは、達成しただけではURLを渡さない（canRedeem だけ返す）。
+      // json.pointUrl を見ているのは、サーバーを以前の版に戻した場合でも
+      // ポイントが受け取れるようにしておくため。
+      if (json.ok && json.phase === 'finish' && (json.canRedeem || json.pointUrl)) {
+        showPointButton(json.pointUrl || null, deviceId);
       }
     } catch (e) {
       lastJson = { ok: false, reason: 'network_error' };
