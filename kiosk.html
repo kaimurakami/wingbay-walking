@@ -11,18 +11,36 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
         integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA=="
         crossorigin="anonymous"></script>
-
 <script src="assets/config.js"></script>
 </head>
 <body class="kiosk">
 <div class="kiosk-wrap">
-  <h1>ウイングベイウォーキング</h1>
-  <p class="kiosk-sub">スマートフォンの「カメラ」アプリでこのQRコードを読み取ってください</p>
-  <div id="qrcode" class="qrbox"></div>
-  <p id="countdown" class="countdown"></p>
-  <p id="todayCount" class="today-count" style="display:none"></p>
-  <p id="offline" class="offline" style="display:none"></p>
+  <div class="kiosk-left">
+    <h1>ウイングベイウォーキング</h1>
+    <p class="kiosk-sub">スマートフォンの「カメラ」アプリで<br>このQRコードを読み取ってください</p>
+    <p id="todayCount" class="today-count" style="display:none"></p>
+    <p id="offline" class="offline" style="display:none"></p>
+  </div>
+  <div class="kiosk-right">
+    <div id="qrcode" class="qrbox"></div>
+    <p id="countdown" class="countdown"></p>
+  </div>
 </div>
+
+<!-- 飾りのベイベーたち。
+     CSSで本文より後ろ（z-index:1）に置いてあるため、画面が狭くて重なった場合でも
+     QRコードの白いカードの裏に隠れるだけで、読み取りを妨げることはない。 -->
+<div class="baybe-layer">
+  <img class="baybe b-run"   src="assets/baybe-run.png"   alt="">
+  <img class="baybe b-jump"  src="assets/baybe-jump.png"  alt="">
+  <img class="baybe b-kick"  src="assets/baybe-kick.png"  alt="">
+  <img class="baybe b-pouch" src="assets/baybe-pouch.png" alt="">
+  <img class="baybe b-wave"  src="assets/baybe-wave.png"  alt="">
+  <img class="baybe b-hello" src="assets/baybe-hello.png" alt="">
+  <img class="baybe b-scale" src="assets/baybe-scale.png" alt="">
+  <img class="baybe b-shout" src="assets/baybe-shout.png" alt="">
+</div>
+<div class="bubble">いっしょに歩こう！</div>
 <button id="fullscreenBtn" style="display:none;position:fixed;top:16px;right:16px;z-index:100;padding:14px 20px;font-size:16px;font-weight:bold;background:#f2a541;color:#fff;border:none;border-radius:10px;box-shadow:0 4px 10px rgba(0,0,0,0.3);">
   画面いっぱいに表示する（最初に1回タップしてください）
 </button>
