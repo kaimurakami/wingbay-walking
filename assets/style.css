@@ -102,15 +102,28 @@ body {
 }
 
 /* ===== キオスク（iPad）表示 ===== */
+/* 画面をスクロールさせない。
+   iPadのSafariはアドレスバーのぶん表示領域が狭く、100vh が実際に見える高さより
+   大きくなるため、100vh で組むと下がはみ出してスクロールが発生する。
+   body自体を画面に固定し、中身は「見えている高さ」に合わせて縮むようにしている。 */
 body.kiosk {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
   background: #eef6fd;
   color: var(--wb-primary-dark);
-  overflow: hidden;
+
+  /* キャラクターの大きさ。画面が低いほど小さくなる。
+     dvh非対応の端末のために、先にvhで書いてから上書きしている。 */
+  --baybe-side: clamp(74px, 16vh, 160px);
+  --baybe-side: clamp(74px, 16dvh, 160px);
+  --baybe-big: clamp(88px, 21vh, 200px);
+  --baybe-big: clamp(88px, 21dvh, 200px);
 }
 /* 背景の淡い水玉 */
 body.kiosk::before {
   content: "";
-  position: fixed;
+  position: absolute;
   inset: 0;
   background-image: radial-gradient(circle, rgba(79, 179, 232, 0.20) 2.5px, transparent 3px);
   background-size: 36px 36px;
@@ -119,11 +132,11 @@ body.kiosk::before {
 /* 画面下の「海」 */
 body.kiosk::after {
   content: "";
-  position: fixed;
+  position: absolute;
   left: -6%;
   right: -6%;
-  bottom: -80px;
-  height: 260px;
+  bottom: 0;
+  height: calc(var(--baybe-big) * 1.15);
   background: #c7e4f8;
   border-radius: 50% 50% 0 0;
   pointer-events: none;
@@ -132,98 +145,102 @@ body.kiosk::after {
 .kiosk-wrap {
   position: relative;
   z-index: 2;
-  min-height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 56px;
+  gap: clamp(20px, 4vw, 56px);
   text-align: center;
-  padding: 24px 56px 180px;
+  padding: 10px clamp(16px, 4vw, 48px) calc(var(--baybe-big) * 0.9);
 }
 .kiosk-left { max-width: 520px; }
 
 .kiosk-wrap h1 {
-  font-size: clamp(28px, 3.6vw, 42px);
-  margin: 0 0 12px;
+  font-size: clamp(22px, 3.4vw, 42px);
+  margin: 0 0 10px;
   color: var(--wb-primary-dark);
 }
 .kiosk-sub {
-  font-size: 23px;
+  font-size: clamp(15px, 1.9vw, 23px);
   line-height: 1.6;
   margin: 0;
   color: #1d5876;
 }
+/* QRコードは縮めない。読み取りの主役なので大きさを保つ。 */
 .qrbox {
   background: #fff;
-  padding: 22px;
+  padding: clamp(10px, 1.6vw, 22px);
   border-radius: 22px;
   display: inline-block;
   border: 5px solid var(--wb-sky);
   box-shadow: 0 10px 26px rgba(11, 79, 122, 0.18);
 }
 .countdown {
-  font-size: 18px;
-  margin-top: 14px;
+  font-size: clamp(13px, 1.5vw, 18px);
+  margin-top: 10px;
   color: var(--wb-text-muted);
 }
 .today-count {
   display: inline-block;
-  font-size: 30px;
+  font-size: clamp(17px, 2.4vw, 30px);
   max-width: 100%;
   font-weight: bold;
-  margin: 22px 0 0;
-  padding: 10px 26px;
+  margin: clamp(10px, 2vh, 22px) 0 0;
+  padding: 9px 22px;
   color: #fff;
   background: var(--wb-accent);
   border-radius: 999px;
   box-shadow: 0 6px 14px rgba(242, 165, 65, 0.4);
 }
 .offline {
-  font-size: 20px;
-  margin-top: 14px;
+  font-size: clamp(14px, 1.7vw, 20px);
+  margin-top: 12px;
   color: var(--wb-error);
   font-weight: bold;
 }
 
 /* ===== ベイベーたち ===== */
-/* キャラクターは必ず本文より後ろに置く。
-   万一QRコードと重なっても、白いカードの裏に隠れて読み取りを邪魔しない。 */
+/* キャラクターは必ず本文より後ろ（z-index:1）に置く。
+   万一QRコードと重なっても、白いカードの裏に隠れて読み取りを邪魔しない。
+   bodyが画面に固定されているので、absoluteで画面の四隅ぴったりに置ける。 */
 .baybe-layer {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 1;
   pointer-events: none;
 }
 .baybe {
   position: absolute;
-  height: auto;
+  width: auto;
+  height: var(--baybe-side);
   animation: wb-bob 3.2s ease-in-out infinite;
 }
 @keyframes wb-bob {
   0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); }
-  50%      { transform: translateY(-12px) rotate(var(--r, 0deg)); }
+  50%      { transform: translateY(-10px) rotate(var(--r, 0deg)); }
 }
-.b-run   { left: 2%;   bottom: 30px; width: 190px; --r: -4deg;  animation-delay: 0s; }
-.b-jump  { left: 20%;  bottom: 62px; width: 150px; --r: 5deg;   animation-delay: .5s; }
-.b-kick  { left: 37%;  bottom: 26px; width: 160px; --r: -3deg;  animation-delay: 1.1s; }
-.b-pouch { right: 24%; bottom: 52px; width: 145px; --r: 4deg;   animation-delay: .8s; }
-.b-wave  { right: 3%;  bottom: 28px; width: 195px; --r: -5deg;  animation-delay: 1.5s; }
-.b-hello { left: 3%;   top: 20px;    width: 150px; --r: -6deg;  animation-delay: .3s; }
-.b-scale { left: 1%;   top: 44%;     width: 120px; --r: 5deg;   animation-delay: 1.8s; }
-.b-shout { right: 1%;  top: 16%;     width: 125px; --r: -7deg;  animation-delay: 2.2s; }
+/* 画面のふちに寄せる */
+.b-run   { left: 0;     bottom: 0;    height: var(--baybe-big); --r: -4deg; animation-delay: 0s; }
+.b-jump  { left: 18%;   bottom: 2%;   --r: 5deg;  animation-delay: .5s; }
+.b-kick  { left: 36%;   bottom: 0;    --r: -3deg; animation-delay: 1.1s; }
+.b-pouch { right: 22%;  bottom: 2%;   --r: 4deg;  animation-delay: .8s; }
+.b-wave  { right: 0;    bottom: 0;    height: var(--baybe-big); --r: -5deg; animation-delay: 1.5s; }
+.b-hello { left: 0;     top: 0;       --r: -6deg; animation-delay: .3s; }
+.b-scale { left: 0;     top: 44%;     height: calc(var(--baybe-side) * 0.8); --r: 5deg; animation-delay: 1.8s; }
+.b-shout { right: 0;    top: 10%;     height: calc(var(--baybe-side) * 0.85); --r: -7deg; animation-delay: 2.2s; }
 
 /* ふきだし */
 .bubble {
-  position: fixed;
+  position: absolute;
   z-index: 2;
-  left: 190px;
-  top: 52px;
+  left: calc(var(--baybe-side) + 16px);
+  top: calc(var(--baybe-side) * 0.2);
   background: #fff;
   color: var(--wb-primary-dark);
-  font-size: 21px;
+  font-size: clamp(14px, 1.8vw, 21px);
   font-weight: bold;
-  padding: 14px 22px;
+  padding: 10px 18px;
   border: 4px solid var(--wb-sky);
   border-radius: 999px;
   box-shadow: 0 6px 16px rgba(11, 79, 122, 0.15);
@@ -241,15 +258,6 @@ body.kiosk::after {
 
 /* 縦向きで使われた場合も崩れないようにする */
 @media (orientation: portrait) {
-  .kiosk-wrap { flex-direction: column; gap: 28px; padding-bottom: 210px; }
+  .kiosk-wrap { flex-direction: column; gap: 16px; }
   .b-jump, .b-pouch, .b-hello, .b-scale, .b-shout, .bubble { display: none; }
-}
-
-/* 画面が低いときは余白とキャラを詰める */
-@media (max-height: 700px) {
-  .kiosk-wrap { padding-bottom: 130px; gap: 40px; }
-  .kiosk-wrap h1 { font-size: 34px; }
-  .kiosk-sub { font-size: 20px; }
-  .baybe { width: 120px !important; }
-  .b-run, .b-wave { width: 140px !important; }
 }
