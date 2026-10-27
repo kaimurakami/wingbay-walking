@@ -9,39 +9,148 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
         integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA=="
         crossorigin="anonymous"></script>
-
 <script src="assets/config.js"></script>
 <style>
-  body { font-family: "Hiragino Sans", "Noto Sans JP", sans-serif; margin: 0; }
-  .toolbar { text-align: center; margin: 20px; }
-  .toolbar button { font-size: 18px; padding: 10px 24px; }
-  .page {
-    width: 190mm;
-    margin: 0 auto 10mm;
-    box-sizing: border-box;
-    padding: 20mm;
-    text-align: center;
-    page-break-after: always;
-    border: 1px dashed #ccc;
+  @page { size: A4 portrait; margin: 0; }
+
+  :root {
+    --navy: #0b4f7a;
+    --blue: #2a8ecb;
+    --sky:  #4fb3e8;
+    --pale: #e8f4fd;
+    --orange: #ef8b1f;
+    --ink: #10384f;
   }
-  .page h2 { font-size: 40px; margin-bottom: 8mm; color: #0b4f7a; }
-  .qrbox { display: inline-block; }
-  .sub { font-size: 20px; margin-top: 8mm; color: #333; line-height: 1.6; }
-  /* 「読んで終わり」と誤解されないよう、次にすることを枠で強調する */
-  .next {
-    margin-top: 8mm;
-    padding: 6mm;
-    border: 3px solid #1c86c7;
-    border-radius: 4mm;
-    font-size: 22px;
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    /* BIZ UDPGothic は読みやすさを目的に作られた書体。高齢の方にも読みやすい。 */
+    font-family: "BIZ UDPGothic", "Meiryo", "Yu Gothic", sans-serif;
+    color: var(--ink);
+    background: #f0f0f0;
+  }
+
+  .toolbar { text-align: center; padding: 16px; }
+  .toolbar button {
+    font-size: 18px;
     font-weight: bold;
-    color: #0b4f7a;
-    line-height: 1.7;
+    padding: 12px 28px;
+    border: none;
+    border-radius: 8px;
+    background: var(--blue);
+    color: #fff;
+    cursor: pointer;
   }
-  .warn { color: #b3261e; text-align: center; font-size: 16px; }
+  .warn { color: #b3261e; text-align: center; font-size: 16px; padding: 0 16px 8px; }
+
+  .page {
+    width: 210mm;
+    height: 297mm;
+    margin: 0 auto 8mm;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    overflow: hidden;
+    page-break-after: always;
+  }
+  .page:last-child { page-break-after: auto; }
+
+  /* ===== 見出し ===== */
+  .band {
+    position: relative;
+    width: 100%;
+    background: var(--blue);
+    color: #fff;
+    padding: 8mm 10mm 7mm;
+  }
+  .band .course {
+    display: inline-block;
+    font-size: 20pt;
+    font-weight: bold;
+    letter-spacing: .08em;
+    background: rgba(255, 255, 255, .25);
+    border-radius: 999px;
+    padding: 2mm 9mm;
+    margin-bottom: 3mm;
+  }
+  .band h2 {
+    font-size: 40pt;
+    line-height: 1.1;
+    text-shadow: 0 0.6mm 0 rgba(0, 0, 0, .12);
+  }
+  .band .baybe {
+    position: absolute;
+    right: 10mm;
+    bottom: 3mm;
+    height: 34mm;
+  }
+
+  /* ===== 読み取りの案内 ===== */
+  .lead {
+    font-size: 20pt;
+    font-weight: bold;
+    color: var(--navy);
+    line-height: 1.5;
+    margin: 7mm 0 5mm;
+  }
+  .qrcard {
+    background: #fff;
+    border: 2mm solid var(--sky);
+    border-radius: 6mm;
+    padding: 6mm;
+    display: inline-block;
+    line-height: 0;
+  }
+  .qrbox { display: inline-block; line-height: 0; }
+
+  /* ===== 次にすること ===== */
+  /* 「読んで終わり」と誤解されないよう、次にすることを強く出す */
+  .next {
+    width: 190mm;
+    margin: 7mm 0 0;
+    background: var(--navy);
+    color: #fff;
+    border-radius: 6mm;
+    padding: 6mm 8mm;
+  }
+  .next .tag {
+    display: inline-block;
+    background: var(--orange);
+    color: #fff;
+    font-size: 15pt;
+    font-weight: bold;
+    border-radius: 999px;
+    padding: 1.5mm 7mm;
+    margin-bottom: 3mm;
+  }
+  .next p {
+    font-size: 23pt;
+    font-weight: bold;
+    line-height: 1.45;
+  }
+  .next small {
+    display: block;
+    font-size: 14pt;
+    font-weight: normal;
+    margin-top: 2.5mm;
+    color: #cfe6f7;
+  }
+
+  .note {
+    margin-top: 5mm;
+    font-size: 14pt;
+    font-weight: bold;
+    color: var(--navy);
+  }
+  .note span { color: var(--orange); }
+
   @media print {
+    body { background: #fff; }
     .toolbar, .warn { display: none; }
-    .page { border: none; }
+    .page { margin: 0; }
   }
 </style>
 </head>
@@ -55,9 +164,9 @@
 <div id="pages"></div>
 <script>
   var courses = [
-    { code: 'A', label: 'Aコース 折り返し地点' },
-    { code: 'B', label: 'Bコース 折り返し地点' },
-    { code: 'C', label: 'Cコース 折り返し地点' }
+    { code: 'A', label: 'Aコース', baybe: 'run' },
+    { code: 'B', label: 'Bコース', baybe: 'kick' },
+    { code: 'C', label: 'Cコース', baybe: 'jump' }
   ];
 
   var base = window.WB_CONFIG.SITE_BASE_URL;
@@ -70,27 +179,43 @@
     var page = document.createElement('div');
     page.className = 'page';
 
-    var h2 = document.createElement('h2');
-    h2.textContent = c.label;
+    var band = document.createElement('div');
+    band.className = 'band';
+    band.innerHTML =
+      '<span class="course">' + c.label + '</span>' +
+      '<h2>折り返し地点</h2>' +
+      '<img class="baybe" src="assets/baybe-' + c.baybe + '.png" alt="">';
 
+    var lead = document.createElement('p');
+    lead.className = 'lead';
+    lead.innerHTML = 'スマートフォンの「カメラ」で<br>このQRコードを読み取ってください';
+
+    var card = document.createElement('div');
+    card.className = 'qrcard';
     var qrDiv = document.createElement('div');
     qrDiv.className = 'qrbox';
-
-    var sub = document.createElement('p');
-    sub.className = 'sub';
-    sub.innerHTML = 'ここが折り返し地点です。<br>このQRコードをスマートフォンの「カメラ」アプリで読み取ってください';
+    card.appendChild(qrDiv);
 
     // ここで終わりではないことを、はっきり伝える
-    var next = document.createElement('p');
+    var next = document.createElement('div');
     next.className = 'next';
-    next.innerHTML = 'このあとインフォメーションにお戻りいただき、<br>はじめに読み取ったQRコードを<br>もう一度読み取るとポイントがもらえます';
+    next.innerHTML =
+      '<span class="tag">つぎに</span>' +
+      '<p>インフォメーションに戻って、<br>最初に読んだQRを もう一度読む</p>' +
+      '<small>読み取るとポイントがもらえます</small>';
 
-    page.appendChild(h2);
-    page.appendChild(qrDiv);
-    page.appendChild(sub);
+    var note = document.createElement('p');
+    note.className = 'note';
+    note.innerHTML = '最初と最後は、<span>同じカメラ</span>で読んでください';
+
+    page.appendChild(band);
+    page.appendChild(lead);
+    page.appendChild(card);
     page.appendChild(next);
+    page.appendChild(note);
     pagesEl.appendChild(page);
 
+    // ▼ QRコードの中身は従来どおり。1文字も変えないこと。
     var url = (base || 'https://example.com/') + 'goal.html?c=' + c.code;
     new QRCode(qrDiv, { text: url, width: 400, height: 400, correctLevel: QRCode.CorrectLevel.M });
   });
